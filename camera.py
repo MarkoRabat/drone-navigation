@@ -55,8 +55,8 @@ class Camera:
 
         # after perspective projection and translation near base of the pyramid
         # will be scaled so that it fill the whole "viewing screen"
-        viewing_screen_width = 20
-        viewing_screen_height = 30
+        self.viewing_screen_width = 20
+        self.viewing_screen_height = 30
 
         # coordinatess of the camera object relative to the common frame of reference
         self.camera_position = np.array([0, 0, 0])
@@ -103,7 +103,7 @@ class Camera:
     # translation by negative camera position and after that rotation that would
     # align cameras viewing orientation along y-axis if applied to it
     # this function expects input vector to have 4 dimentions, last dim = 1
-    def standardize_frame(self, vec_to_project):
+    def standardize_frame(self, vec_to_project: np.ndarray):
         """
             apply transformations that would align cameras position and orientation
             with the standard frame of reference to all objects that we are projecting
@@ -114,14 +114,6 @@ class Camera:
             camera is positioned at the center of it and its viewing orientation is
             alligned along y-axis
         """
-
-        # make sure vec_to_project has 4 dims
-        #vec_to_project = np.array([
-        #    vec_to_project[0],
-        #    vec_to_project[1],
-        #    vec_to_project[2],
-        #    1
-        #])
 
         # add -camera_position vector to object (vector) being projected
         translation_transformation = np.array([
@@ -142,7 +134,7 @@ class Camera:
         return np.dot(rotation_transformation, translated_vector)
 
     # project standardized frame to screen
-    def project_sf(self, vec_to_project):
+    def project_sf(self, vec_to_project: np.ndarray):
         """
             appy perspective and ortographic transformations to a given object (vector),
             this function when applied to an object (vector) from standardized frame
@@ -160,6 +152,49 @@ class Camera:
 
         # apply ortographic_transformation - vector is projected:
         return np.dot(self.ortographic_transformation, normalized_perspective_vector)
+
+    # intended way to use this class is camera_object(vec_to_project)
+    #     - this should return vector projected to cameras viewing screen
+    def __call__(self, vec_to_project: np.ndarray):
+
+        if vec_to_project.size < 3:
+            raise Exception("Error: only vectors of size 3 or 4 can be projected")
+
+        # make sure that vector has 4 dims, whil the last one = 1
+        vec_to_project = np.array([
+            vec_to_project[0],
+            vec_to_project[1],
+            vec_to_project[2],
+            1
+        ])
+
+        vector_in_standardized_frame = self.standardize_frame(vec_to_project)
+
+        # vector projected onto screen
+        projected_vector = self.project_sf(vector_in_standardized_frame)
+
+        # assing propery indicating whether this point falls inside of
+        # viewing screen and if it does fall outside of viewing screen
+        # make it fit into it by maximazing | minimazing coordinate values to
+        # max_width / 2 or max_height / 2 | -max_width / 2 or max_height / 2 
+
+        projected_vector.isinside_viewing_screen = True
+
+        if projected_vector[0] > self.viewing_screen_width // 2:
+            projected_vector[0] = self.viewing_screen_width // 2
+            projected_vector.isinside_viewing_screen = False
+        elif projected_vector[0] < -self.viewing_screen_width // 2
+            projected_vector[0] = -self.viewing_screen_width // 2
+            projected_vector.isinside_viewing_screen = False
+
+        if projected_vector[2] > self.viewing_screen_height // 2:
+            projected_vector[2] = self.viewing_screen_height // 2
+            projected_vector.isinside_viewing_screen = False
+        elif projected_vector[2] < -self.viewing_screen_height // 2:
+            projected_vector[2] = -self.viewing_screen_height // 2
+            projected_vector.isinside_viewing_screen = False
+
+        return projected_vector
 
 
 
