@@ -1,7 +1,10 @@
 import numpy as np
 import utils.vector_utils as vutils
+from world import WorldObject
 
-class Camera:
+# intended way to use this class is camera_object(vec_to_project)
+# to project vector to the cameras screen
+class Camera(WorldObject):
     """
         Camera class applies perspective projection
         matrix onto objects (points) that are found
@@ -35,10 +38,11 @@ class Camera:
     """
 
 
-    def __init__(self):
+    def __init__(self, viewing_screen_width, viewing_screen_height):
+        super(Camera, self).__init__()
 
-        n = 10 # n is distance to the smaller truncated pyramid base along y-axis
-        f = 20 # f is distance to the bigger truncated pyramid base along y-axis
+        self.n = n = 1 # n is distance to the smaller truncated pyramid base along y-axis
+        self.f = f = 20 # f is distance to the bigger truncated pyramid base along y-axis
 
         # f > n -- smaller base of the pyramid is closer to the coordinate center
         if (n > f): n, f = f, n
@@ -51,12 +55,12 @@ class Camera:
 
         # truncated pyramids near base dimentions
         near_base_width = 10
-        near_base_height = 5
+        near_base_height = 10 
 
         # after perspective projection and translation near base of the pyramid
         # will be scaled so that it fill the whole "viewing screen"
-        self.viewing_screen_width = 20
-        self.viewing_screen_height = 30
+        self.viewing_screen_width = viewing_screen_width
+        self.viewing_screen_height = viewing_screen_height
 
         # coordinatess of the camera object relative to the common frame of reference
         self.camera_position = np.array([0, 0, 0])
@@ -88,9 +92,9 @@ class Camera:
         # stretches (squishes) the base of the truncated pyramid
         # in order to take the whole viewing screen
         scale_transformation = np.array([
-            [viewing_screen_width / near_base_width, 0,                 0,                        0],
+            [self.viewing_screen_width / near_base_width, 0,                 0,                        0],
             [                0,                      1,                 0,                        0],
-            [                0,                      0, viewing_screen_height / near_base_height, 0],
+            [                0,                      0, self.viewing_screen_height / near_base_height, 0],
             [                0,                      0,                 0,                        1]
         ], dtype=np.float64)
 
@@ -154,16 +158,21 @@ class Camera:
         return np.dot(self.ortographic_transformation, normalized_perspective_vector)
 
     # intended way to use this class is camera_object(vec_to_project)
-    #     - this should return vector projected to cameras viewing screen
+    #     - this returns vector projected onto cameras viewing screen
+    #     - if y coordinate is negative, that means that the given point
+    #           when projected falls outside of viewing screen
     def __call__(self, vec_to_project: np.ndarray):
 
         if vec_to_project.size < 3:
             raise Exception("Error: only vectors of size 3 or 4 can be projected")
 
+        # does vec_to_project fall outside of viewing volume
+        not_visible = vec_to_project[1] < self.n or vec_to_project[1] > self.f
+
         # make sure that vector has 4 dims, whil the last one = 1
         vec_to_project = np.array([
             vec_to_project[0],
-            vec_to_project[1],
+            min(max(vec_to_project[1], self.n), self.f), # y must be in [n, f]
             vec_to_project[2],
             1
         ])
@@ -173,28 +182,35 @@ class Camera:
         # vector projected onto screen
         projected_vector = self.project_sf(vector_in_standardized_frame)
 
-        # assing propery indicating whether this point falls inside of
-        # viewing screen and if it does fall outside of viewing screen
+        # not_visible propery indicates whether this point falls outside of
+        # viewing screen.
+        # if it does fall outside of viewing screen
         # make it fit into it by maximazing | minimazing coordinate values to
         # max_width / 2 or max_height / 2 | -max_width / 2 or max_height / 2 
 
-        projected_vector.isinside_viewing_screen = True
-
         if projected_vector[0] > self.viewing_screen_width // 2:
             projected_vector[0] = self.viewing_screen_width // 2
-            projected_vector.isinside_viewing_screen = False
-        elif projected_vector[0] < -self.viewing_screen_width // 2
+            not_visible = True
+        elif projected_vector[0] < -self.viewing_screen_width // 2:
             projected_vector[0] = -self.viewing_screen_width // 2
-            projected_vector.isinside_viewing_screen = False
+            not_visible = True
 
         if projected_vector[2] > self.viewing_screen_height // 2:
             projected_vector[2] = self.viewing_screen_height // 2
-            projected_vector.isinside_viewing_screen = False
+            not_visible = True
         elif projected_vector[2] < -self.viewing_screen_height // 2:
             projected_vector[2] = -self.viewing_screen_height // 2
-            projected_vector.isinside_viewing_screen = False
+            not_visible = True
 
-        return projected_vector
+        # if the point falls outside of viewing screen y is set to
+        # negative here; y won't be negative in any other case
+        # because of the condition ( (f + n)y_old - fn ) / y_old > 0
+        # which is equal to y_old > 0, and since y_old is confined to [n, f]
+        # by the previous code, and since n > 0, this condition is always
+        # satisfied
+        if not_visible: projected_vector[1] *= -1
+
+        return np.delete(projected_vector, 3)
 
 
 

@@ -2,15 +2,16 @@ from os import environ
 environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 import pygame as pyg
 import numpy as np
+from presenter.presenter import Presenter
 
 pyg.init()
 pyg.font.init()
 text_font = pyg.font.SysFont("Comic Sans MS", 15)
 
-class PygScreen:
+class PygScreen(Presenter):
 
     static_camera_index = 0
-    SCREEN_WIDTH = 1200
+    SCREEN_WIDTH = 600
     SCREEN_HEIGHT = 600
     BG_COLOR = (255, 255, 255)
 
@@ -24,7 +25,7 @@ class PygScreen:
     def update(self, data_to_draw):
         pyg.display.set_caption(f"drone simulator {self.camera_index}")
         self.screen.fill(self.BG_COLOR)
-        if len(data_to_draw) == 2:
-            pyg.draw.line(self.screen, (0, 0, 0), data_to_draw[0], data_to_draw[1])
+        for line in data_to_draw:
+            pyg.draw.line(self.screen, (0, 0, 0), np.delete(line[0], 1), np.delete(line[1], 1))
         pyg.display.flip()
 
