@@ -38,11 +38,11 @@ class Camera(WorldObject):
     """
 
 
-    def __init__(self, viewing_screen_width, viewing_screen_height):
+    def __init__(self):
         super(Camera, self).__init__()
 
         self.n = n = 1 # n is distance to the smaller truncated pyramid base along y-axis
-        self.f = f = 20 # f is distance to the bigger truncated pyramid base along y-axis
+        self.f = f = 10 # f is distance to the bigger truncated pyramid base along y-axis
 
         # f > n -- smaller base of the pyramid is closer to the coordinate center
         if (n > f): n, f = f, n
@@ -54,13 +54,15 @@ class Camera(WorldObject):
         near_base_center = (0, n, 0) 
 
         # truncated pyramids near base dimentions
-        near_base_width = 10
-        near_base_height = 10 
+        self.near_base_width = 40
+        self.near_base_height = 40
+
+        self.zoom = 10
 
         # after perspective projection and translation near base of the pyramid
         # will be scaled so that it fill the whole "viewing screen"
-        self.viewing_screen_width = viewing_screen_width
-        self.viewing_screen_height = viewing_screen_height
+        viewing_screen_width = self.near_base_width * self.zoom
+        viewing_screen_height = self.near_base_height * self.zoom
 
         # coordinatess of the camera object relative to the common frame of reference
         self.camera_position = np.array([0, 0, 0])
@@ -92,10 +94,10 @@ class Camera(WorldObject):
         # stretches (squishes) the base of the truncated pyramid
         # in order to take the whole viewing screen
         scale_transformation = np.array([
-            [self.viewing_screen_width / near_base_width, 0,                 0,                        0],
-            [                0,                      1,                 0,                        0],
-            [                0,                      0, self.viewing_screen_height / near_base_height, 0],
-            [                0,                      0,                 0,                        1]
+            [viewing_screen_width / self.near_base_width, 0,                 0,                             0],
+            [                0,                           1,                 0,                             0],
+            [                0,                           0, viewing_screen_height / self.near_base_height, 0],
+            [                0,                           0,                 0,                             1]
         ], dtype=np.float64)
 
         # first apply translation_transformation then scale_transformation
@@ -124,6 +126,7 @@ class Camera(WorldObject):
             [1, 0, 0, -self.camera_position[0]],
             [0, 1, 0, -self.camera_position[1]],
             [0, 0, 1, -self.camera_position[2]],
+
             [0, 0, 0,         1           ]
         ], dtype=np.float64)
 
@@ -137,6 +140,37 @@ class Camera(WorldObject):
         # apply rotation_transformation to translated_vector
         return np.dot(rotation_transformation, translated_vector)
 
+    def set_zoom(self, new_zoom):
+        """
+            ortographic_transformation that we currently have at the end gives us the screen with width
+            and height: (near_base_width * old_zoom, near_base_height * old_zoom), which are the 'old' values,
+            and we want to end up with (near_base_width * new_zoom, near_base_height * new_zoom) which are the
+            new values; what we therefore need to do is to apply the scaling operation that scales old values
+            to the new values to the result of the ortographic_transformation to get screen size that we want
+            at the end; but since applying the dot product of two matrices to a vector is the same as applying
+            these transformations one after the other, we can just create new ortographic_transformation by
+            composing the current one with our new scale transformation, and that is what this function does
+        """
+        old_viewing_screen_width = self.near_base_width * self.zoom
+        old_viewing_screen_height = self.near_base_height * self.zoom
+
+        self.zoom = new_zoom
+        new_viewing_screen_width = self.near_base_width * self.zoom
+        new_viewing_screen_height = self.near_base_height * self.zoom
+
+        width_scaling_factor = new_viewing_screen_width / old_viewing_screen_width
+        height_scaling_factor = new_viewing_screen_height / old_viewing_screen_height
+
+        # scaling matrix
+        scale_transformation = np.array([
+            [width_scaling_factor,     0,          0,            0],
+            [             0,           1,          0,            0],
+            [             0,           0, height_scaling_factor, 0],
+            [             0,           0,          0,            1]
+        ], dtype=np.float64)
+
+        self.ortographic_transformation = np.dot(scale_transformation, self.ortographic_transformation)
+
     # project standardized frame to screen
     def project_sf(self, vec_to_project: np.ndarray):
         """
@@ -147,12 +181,18 @@ class Camera(WorldObject):
                 This function assumes that input vector is inside of standardize_frame,
                     - that it belongs to view volume of the camera, transformed onto sf
         """
-
+        
         # apply perspective transformation:
         perspective_vector = np.dot(self.perspective_transformation, vec_to_project)
 
         # normalize perspective vector - devide by 4th coordinate in order for it to equal 1
         normalized_perspective_vector = perspective_vector / perspective_vector[3]
+        # the magnitude of the normalized vector is different than that of the original input
+        # vector, and we want the vector created by perspective transformation to have the
+        # same magnitude as the original vector
+        normalized_perspective_vector *= vutils.magnitude(vec_to_project) \
+            / vutils.magnitude(normalized_perspective_vector)
+        normalized_perspective_vector[3] = 1
 
         # apply ortographic_transformation - vector is projected:
         return np.dot(self.ortographic_transformation, normalized_perspective_vector)
@@ -163,21 +203,28 @@ class Camera(WorldObject):
     #           when projected falls outside of viewing screen
     def __call__(self, vec_to_project: np.ndarray):
 
+
         if vec_to_project.size < 3:
             raise Exception("Error: only vectors of size 3 or 4 can be projected")
 
-        # does vec_to_project fall outside of viewing volume
-        not_visible = vec_to_project[1] < self.n or vec_to_project[1] > self.f
-
-        # make sure that vector has 4 dims, whil the last one = 1
+        # make sure that vector has 4 dims, with the last one = 1
         vec_to_project = np.array([
             vec_to_project[0],
-            min(max(vec_to_project[1], self.n), self.f), # y must be in [n, f]
+            vec_to_project[1],
             vec_to_project[2],
             1
         ])
 
         vector_in_standardized_frame = self.standardize_frame(vec_to_project)
+
+        # does vec_to_project fall outside of viewing volume
+        # if it does we'll flag that by making y negative
+        not_visible = vector_in_standardized_frame[1] < self.n \
+            or vector_in_standardized_frame[1] > self.f
+
+        # abs(y) must be in [n, f], for now y is always positive
+        vector_in_standardized_frame[1] =  min(max(
+            vector_in_standardized_frame[1], self.n), self.f)
 
         # vector projected onto screen
         projected_vector = self.project_sf(vector_in_standardized_frame)
@@ -188,19 +235,23 @@ class Camera(WorldObject):
         # make it fit into it by maximazing | minimazing coordinate values to
         # max_width / 2 or max_height / 2 | -max_width / 2 or max_height / 2 
 
-        if projected_vector[0] > self.viewing_screen_width // 2:
-            projected_vector[0] = self.viewing_screen_width // 2
+        viewing_screen_width = self.near_base_width * self.zoom
+        viewing_screen_height = self.near_base_height * self.zoom
+
+        if projected_vector[0] > viewing_screen_width // 2:
+            projected_vector[0] = viewing_screen_width // 2
             not_visible = True
-        elif projected_vector[0] < -self.viewing_screen_width // 2:
-            projected_vector[0] = -self.viewing_screen_width // 2
+        elif projected_vector[0] < -viewing_screen_width // 2:
+            projected_vector[0] = -viewing_screen_width // 2
             not_visible = True
 
-        if projected_vector[2] > self.viewing_screen_height // 2:
-            projected_vector[2] = self.viewing_screen_height // 2
+        if projected_vector[2] > viewing_screen_height // 2:
+            projected_vector[2] = viewing_screen_height // 2
             not_visible = True
-        elif projected_vector[2] < -self.viewing_screen_height // 2:
-            projected_vector[2] = -self.viewing_screen_height // 2
+        elif projected_vector[2] < -viewing_screen_height // 2:
+            projected_vector[2] = -viewing_screen_height // 2
             not_visible = True
+
 
         # if the point falls outside of viewing screen y is set to
         # negative here; y won't be negative in any other case
@@ -208,9 +259,13 @@ class Camera(WorldObject):
         # which is equal to y_old > 0, and since y_old is confined to [n, f]
         # by the previous code, and since n > 0, this condition is always
         # satisfied
-        if not_visible: projected_vector[1] *= -1
+        if not_visible: 
+            projected_vector[1] = max(projected_vector[1], 1)
+            projected_vector[1] *= -1
+
 
         return np.delete(projected_vector, 3)
+
 
 
 
