@@ -22,10 +22,19 @@ class PygScreen(Presenter):
         self.camera_index = PygScreen.static_camera_index
         self.screen = pyg.display.set_mode((self.screen_width, self.screen_height))
 
-    def update(self, data_to_draw):
+    def update_presentation(self, data_to_draw):
         pyg.display.set_caption(f"drone simulator {self.camera_index}")
         self.screen.fill(self.BG_COLOR)
         for line in data_to_draw:
-            pyg.draw.line(self.screen, (0, 0, 0), np.delete(line[0], 1), np.delete(line[1], 1))
+            pyg.draw.line(self.screen, (0, 0, 0), line[0], line[1])
         pyg.display.flip()
 
+    def adjust_data_point(self, data_point):
+        # for now data_point is a line
+        line = [
+            [data_point[0][0] * self.screen_width / 400 + self.screen_width / 2,
+            -data_point[0][2] * self.screen_height / 400 + self.screen_height / 2],
+            [data_point[1][0] * self.screen_width / 400 + self.screen_width / 2,
+            -data_point[1][2] * self.screen_height / 400 + self.screen_height / 2]
+        ]
+        return line

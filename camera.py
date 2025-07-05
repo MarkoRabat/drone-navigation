@@ -154,7 +154,7 @@ class Camera(WorldObject):
         old_viewing_screen_width = self.near_base_width * self.zoom
         old_viewing_screen_height = self.near_base_height * self.zoom
 
-        self.zoom = new_zoom
+        self.zoom = new_zoom * 10 # one unit of zoom is 10 ([zoom] = 10)
         new_viewing_screen_width = self.near_base_width * self.zoom
         new_viewing_screen_height = self.near_base_height * self.zoom
 
