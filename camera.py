@@ -39,7 +39,7 @@ class Camera(WorldObject):
 
 
     def __init__(self):
-        super(Camera, self).__init__()
+        super().__init__()
 
         self.n = n = 1 # n is distance to the smaller truncated pyramid base along y-axis
         self.f = f = 10 # f is distance to the bigger truncated pyramid base along y-axis

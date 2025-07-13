@@ -2,6 +2,12 @@ from command import Command
 
 # Singleton
 class WorldBuilder:
+    """
+        def build_world(world):
+            build world logic here...
+            return world
+        world = WorldBuilder().build_with(build_world)
+    """
     _instance = None
     def __init__(self): pass
     def __new__(cls, *args, **kwargs):
@@ -25,7 +31,7 @@ class WorldObject:
 #class Obj2(WorldObject):
 #
 #    def __init__(self):
-#        super(Obj2, self).__init__()
+#        super().__init__()
 
 
 class World:
