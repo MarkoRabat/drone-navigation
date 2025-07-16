@@ -3,12 +3,6 @@ import threading
 
 
 class CommandQueue:
-    """
-        intended usage of a command is:
-        for oid in command.get_oids():
-            world[oid].exec(command)
-                => WorldObjec.exec(command): command(self)
-    """
 
     MAX_CAPACITY = 500
 
@@ -43,9 +37,18 @@ class Command:
         self.command_function = command_function
         self.object_id = object_id
 
-    def get_oids(self): return self.object_id
+    def get_oid(self): return self.object_id
     def __call__(self, entity): self.command_function(entity)
 
 
 
 AvailableCommands = dict()
+
+def camera_forward(camera):
+    camera.camera_position += camera.camera_orientation
+
+def camera_beckward(camera):
+    camera.camera_position -= camera.camera_orientation
+    
+AvailableCommands["camera_forward"] = camera_forward
+AvailableCommands["camera_beckward"] = camera_beckward

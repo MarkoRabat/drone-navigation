@@ -1,4 +1,6 @@
-from command import Command
+from command import Command, CommandQueue
+import threading
+import time
 
 # Singleton
 class WorldBuilder:
@@ -35,7 +37,11 @@ class WorldObject:
 
 
 class World:
-    def __init__(self): self.elements = dict()
+    def __init__(self):
+        self.elements = dict()
+        self.command_queue = None
+        self.executor_stopped = threading.Event()
+        self.command_executor = None
 
     def __getitem__(self, element_id: int):
         if element_id in self.elements:
@@ -46,51 +52,33 @@ class World:
         self.elements[world_object.my_wid] = world_object
         return self
 
+    def set_command_queue(self, command_queue: CommandQueue):
+        self.command_queue = command_queue
 
+    def start_command_executor(self):
+        if self.command_queue is None:
+            raise Error("world: tried to start executor while command queue is not set")
+        if self.command_executor is not None:
+            self.stop_command_executor()
+        self.command_executor = threading.Thread(target=self.executor_work)
+        self.command_executor.start()
 
-"""
+    def executor_work(self):
+        command_batch_size = 10
+        while not self.executor_stopped.is_set():
+            for i in range(command_batch_size):
+                command = self.command_queue.delete_command()
+                if command.get_oid() in self.elements:
+                    self.elements[command.get_oid()].exec(command)
+            time.sleep(0.1)
 
-    craete a thread inside of each worl that waits on a signal/release
-    mutex until there is something in the command queue, and when there
-    is, command queue should notify that thread to execute the command
-
-    ??? for some queues where volume is high, maybe use busy wait
-
-    *** for simulation loop use busy wait, as a new thread inside of the world object
-
-signal/release mutex code:
-
-import threading
-
-condition = threading.Condition()
-shared_data_ready = False
-
-def waiter():
-    print("Waiter: Waiting for signal...")
-    with condition:
-        while not shared_data_ready:
-            condition.wait()  # Wait until notified
-        print("Waiter: Got the signal! Proceeding...")
-
-def signaler():
-    global shared_data_ready
-    with condition:
-        print("Signaler: Preparing data...")
-        shared_data_ready = True
-        condition.notify()  # Send signal to waiting thread
-        print("Signaler: Signal sent.")
-
-# Start threads
-t1 = threading.Thread(target=waiter)
-t2 = threading.Thread(target=signaler)
-
-t1.start()
-t2.start()
-
-t1.join()
-t2.join()
-"""
-
-
-
+    # thread stopping are not tested
+    # potentiali strange situations
+    # like thread loocking and memory leaks
+    # memory leaks are probably most dangerous
+    # and likely threat, dead lock is less likely
+    # nothing tested yet, so we don't know
+    def stop_command_executor(self):
+        self.executor_stopped.set()
+        self.command_executor = None
 

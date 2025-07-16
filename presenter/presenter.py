@@ -8,6 +8,7 @@ class Presenter:
     def __init__(self):
         self.terminate_input_worker = threading.Event()
         self.command_activations = dict()
+        self.input_worker = None
 
     def update_presentation(self, data_to_draw):
         pass
@@ -34,11 +35,19 @@ class Presenter:
             self.command_activations[command_key].activate_command()
 
     def start_input_worker(self):
+        if self.input_worker is not None: self.stop_input_worker()
         self.input_worker = threading.Thread(target=self.input_worker_wrapper)
         self.input_worker.start()
 
+    # thread stopping are not tested
+    # potentiali strange situations
+    # like thread loocking and memory leaks
+    # memory leaks are probably most dangerous
+    # and likely threat, dead lock is less likely
+    # nothing tested yet, so we don't know
     def stop_input_worker(self):
         self.terminate_input_worker.set()
+        self.input_worker = None
 
     def input_worker_wrapper(self):
         while not self.terminate_input_worker.is_set():
