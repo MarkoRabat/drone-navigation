@@ -1,9 +1,13 @@
 from command import CommandQueue
+from activation import Activation
+import threading
+import time
 
 class Presenter:
 
     def __init__(self):
-        pass
+        self.terminate_input_worker = threading.Event()
+        self.command_activations = dict()
 
     def update_presentation(self, data_to_draw):
         pass
@@ -20,9 +24,31 @@ class Presenter:
         adjusted_data = self.adjust_data(data_to_draw)
         self.update_presentation(adjusted_data)
 
-    def set_command_queue(self, command_queue: CommandQueue):
-        self.command_queue = command_queue
+    def add_command_activation(self, key: str, activation: Activation):
+        if key in self.command_activations:
+            raise Error(f"redefinition of {key} command activation")
+        self.command_activations[key] = activation
 
+    def activate_command(self, command_key: str):
+        if command_key in self.command_activations:
+            self.command_activations[command_key].activate_command()
+
+    def start_input_worker(self):
+        self.input_worker = threading.Thread(target=self.input_worker_wrapper)
+        self.input_worker.start()
+
+    def stop_input_worker(self):
+        self.terminate_input_worker.set()
+
+    def input_worker_wrapper(self):
+        while not self.terminate_input_worker.is_set():
+            self.input_worker_work()
+
+    def input_worker_work(self):
+        time.sleep(0.5)
+
+
+    """
     def create_command(self, command_identifier):
 
         # define functions somewhere else probably, maybe in some
@@ -38,4 +64,5 @@ class Presenter:
             case _:
                 pass
     
+    """
 

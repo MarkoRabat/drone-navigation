@@ -9,13 +9,13 @@ class Activation():
     def unset_reference(self):
         self.cg_reference = None
 
-    def activate(self):
+    def activate_command(self):
         self.cg_reference.activate()
 
 class UserInput(Activation):
     def __init__(self):
         super().__init__()
 
-    def activate(self):
-        super().activate();
+    #def activate(self):
+        #super().activate();
 
