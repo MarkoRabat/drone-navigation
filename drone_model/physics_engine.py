@@ -22,7 +22,7 @@ gravity_vector = np.array([0, 0, 0], dtype=float)
 
 def rotation_matrix_factory(angle, unit_vector, degrees=False):
     if degrees: angle = angle * np.pi / 180
-    unit_vector =     axis_rotation_matrix = np.array([
+    axis_rotation_matrix = np.array([
         [np.cos(angle) + unit_vector[0] * unit_vector[0] * (1 - np.cos(angle)), unit_vector[0] * unit_vector[1] * (1 - np.cos(angle)) - unit_vector[2] * np.sin(angle), unit_vector[0] * unit_vector[2] * (1 - np.cos(angle)) + unit_vector[1] * np.sin(angle), 0],
         [unit_vector[1] * unit_vector[0] * (1 - np.cos(angle)) + unit_vector[2] * np.sin(angle), np.cos(angle) + unit_vector[1] * unit_vector[1] * (1 - np.cos(angle)), unit_vector[1] * unit_vector[2] * (1 - np.cos(angle)) - unit_vector[0] * np.sin(angle), 0],
         [unit_vector[2] * unit_vector[0] * (1 - np.cos(angle)) - unit_vector[1] * np.sin(angle), unit_vector[2] * unit_vector[1] * (1 - np.cos(angle)) + unit_vector[0] * np.sin(angle), np.cos(angle) + unit_vector[2] * unit_vector[2] * (1 - np.cos(angle)), 0],

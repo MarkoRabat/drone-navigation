@@ -29,7 +29,7 @@ class Drone():
         self.euler_angles = np.array([0, 0, 0], dtype=float)
         self.pd_params_integral = np.array([0, 0, 0], dtype=float)
 
-        self.propeller_centers = self.motor_coordinates + np.array([0, -2.5, 0, 0], dtype=float)
+        self.propeller_centers = self.motor_coordinates + np.array([0, radius * 0.03, 0, 0], dtype=float)
         propeller_size = radius / 10.
         self.propellers = []
         for i in range(4):

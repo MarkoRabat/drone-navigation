@@ -129,13 +129,22 @@ c2line4 = [camera2(line4[0]), camera2(line4[1])]
 
 camera1_addend = np.array([1, 0, 0])
 camera2_addend = np.array([0, 0, 1])
-camera1.camera_position += np.array([0, -4, 4])
-camera1.set_camera_orientation(np.array([0, 0, -1]))
+camera1.camera_position += np.array([0, 0, -6])
+#camera1.set_camera_orientation(np.array([0, 0, -1]))
 
 #camera1.set_camera_orientation(np.array([0, 0, -1]))
 
 
-drone = Drone(np.array([0, 4, 0]), 3, camera1)
+drone = Drone(np.array([0, 4, 0]), 2, camera1)
+print("==================")
+print(drone.drone_center)
+print(drone.motor_coordinates)
+drone.rotate(math.pi / 3, np.array([0, 1, 0]))
+print("==================")
+print(drone.drone_center)
+print(drone.motor_coordinates)
+print("==================")
+"""
 print("==================")
 print(drone.drone_center)
 print(drone.motor_coordinates)
@@ -151,11 +160,18 @@ print("==================")
 print(drone.drone_center)
 print(drone.motor_coordinates)
 print("==================")
+"""
+drone.motor_set_power_percent(0, 0.2)
+drone.motor_set_power_percent(1, -0.2)
+drone.motor_set_power_percent(2, 0.2)
+drone.motor_set_power_percent(3, -0.2)
+drone.update()
 
 if __name__ == "__main__":
     while True:
         pyg_screen1([DLine(c1line1), DLine(c1line2), DLine(c1line3), DLine(c1line4), DDrone(drone)])
         time.sleep(0.02)
+        drone.rotate(math.pi / 3, np.array([0, 1, 0]))
         #drone.rotate(math.pi / 12, np.array([0, 0, 1]))
         #pyg_screen2([c2line1, c2line2, c2line3, c2line4])
         #time.sleep(1)

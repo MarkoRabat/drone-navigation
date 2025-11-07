@@ -38,7 +38,7 @@ class DDrone(Drawable):
     def draw(self):
         body_width = 2
         motor_point_size = 1
-        motor_width = 3
+        motor_width = 1
 
         drone = self.data["drone"]
         motors = self.data["motors"]
@@ -68,8 +68,8 @@ class DDrone(Drawable):
     
     def adjust(self):
         if self.data.pr is None: raise Exception("camera to project onto not supplied to drone")
-        thrust_scaling_factor = 15
-        gravity_scaling_factor = 2.5
+        thrust_scaling_factor = 0.02
+        gravity_scaling_factor = 0.025
         motors = self.data.motor_coordinates[self.data.motor_coordinates[:, 2].argsort()][:, :-1]
         drone_center = self.data.drone_center
 
@@ -79,7 +79,7 @@ class DDrone(Drawable):
 
         if self.data.thrust_vectors is not None:
             thrust_force_vectors = np.insert(thrust_scaling_factor * self.data.thrust_vectors, 3, np.full(shape=4, fill_value=0, dtype=float), axis=1)
-            thrust_force_begin = self.data.propeller_centers + 2 * pe.normalize_vector(thrust_force_vectors[0])
+            thrust_force_begin = self.data.propeller_centers + 0.2 * pe.normalize_vector(thrust_force_vectors[0])
             thrust_force_end = self.data.propeller_centers + thrust_force_vectors
             thrust_force_begin = thrust_force_begin[self.data.propeller_centers[:, 2].argsort()][:, :-1]
             thrust_force_end = thrust_force_end[self.data.propeller_centers[:, 2].argsort()][:, :-1]

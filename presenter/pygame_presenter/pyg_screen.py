@@ -12,8 +12,8 @@ text_font = pyg.font.SysFont("Comic Sans MS", 15)
 class PygScreen(Presenter):
 
     static_camera_index = 0
-    SCREEN_WIDTH = 600
-    SCREEN_HEIGHT = 600
+    SCREEN_WIDTH = 1600
+    SCREEN_HEIGHT = 1600
     BG_COLOR = (255, 255, 255)
 
     def __init__(self):
