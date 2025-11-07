@@ -1,4 +1,5 @@
 from activation import Activation
+import copy
 
 # Singleton
 class CommandGeneratorBuilder():
@@ -38,7 +39,7 @@ class CommandGenerator():
         if not self.command_queue:
             raise Error("command_generator error: command queue not set")
         for command in self.commands:
-            self.command_queue.insert_command(command)
+            self.command_queue.insert_command(copy.deepcopy(command))
 
 
 

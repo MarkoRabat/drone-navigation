@@ -70,7 +70,7 @@ class World:
                 command = self.command_queue.delete_command()
                 if command.get_oid() in self.elements:
                     self.elements[command.get_oid()].exec(command)
-            time.sleep(0.1)
+            #time.sleep(0.1)
 
     # thread stopping are not tested
     # potentiali strange situations

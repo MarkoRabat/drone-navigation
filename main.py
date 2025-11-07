@@ -3,31 +3,18 @@ import numpy as np
 from camera import Camera
 from presenter.presenter import Presenter
 from presenter.pygame_presenter.pyg_screen import PygScreen
+from presenter.pygame_presenter.drawable import DLine, DDrone
 from world import WorldBuilder
 from command import Command, CommandQueue, AvailableCommands
 from command_generator import CommandGeneratorBuilder
 from activation import UserInput
+from drone_model.drone_model import Drone
+import math
 
 pyg_screen1 = PygScreen()
 pyg_screen2 = PygScreen()
 
-def print_command1(entity):
-    print(entity, end=" ")
-    print("forward")
-
-def print_command2(entity):
-    print(entity, end=" ")
-    print("left")
-
-def print_command3(entity):
-    print(entity, end=" ")
-    print("backward")
-
-def print_command4(entity):
-    print(entity, end=" ")
-    print("right")
-
-def print_command5(entity):
+def print_command5(entity, params):
     print(entity, end=" ")
     print("quit")
 
@@ -37,13 +24,11 @@ camera2 = Camera()
 command_queue = CommandQueue()
 
 comm1 = Command(AvailableCommands["camera_forward"], 1)
-comm2 = Command(print_command2, 1)
-comm2("hello from comm2")
+comm2 = Command(AvailableCommands["camera_left"], 1)
 comm3 = Command(AvailableCommands["camera_beckward"], 1)
-comm4 = Command(print_command4, 1)
-comm4("hello from comm4")
-comm5 = Command(print_command5, 1)
-comm5("hello from comm5")
+comm4 = Command(AvailableCommands["camera_right"], 1)
+comm5 = Command(AvailableCommands["camera_reorient"], 1)
+comm6 = Command(print_command5, 1)
 
 def build_world(world):
     world.set_command_queue(command_queue)
@@ -53,22 +38,26 @@ def build_world(world):
     user_input3 = UserInput()
     user_input4 = UserInput()
     user_input5 = UserInput()
+    user_input6 = UserInput()
 
     def make_command_generator1(cg):
         cg.set_command_queue(command_queue)
         cg.add_command(comm1) # camera forward
     def make_command_generator2(cg):
         cg.set_command_queue(command_queue)
-        cg.add_command(comm2)
+        cg.add_command(comm2) # camera left
     def make_command_generator3(cg):
         cg.set_command_queue(command_queue)
         cg.add_command(comm3) # camera beckward
     def make_command_generator4(cg):
         cg.set_command_queue(command_queue)
-        cg.add_command(comm4)
+        cg.add_command(comm4) # camera right
     def make_command_generator5(cg):
         cg.set_command_queue(command_queue)
-        cg.add_command(comm5)
+        cg.add_command(comm5) # camera reorient
+    def make_command_generator6(cg):
+        cg.set_command_queue(command_queue)
+        cg.add_command(comm6)
 
 
     cg1 = CommandGeneratorBuilder().build_with(make_command_generator1)
@@ -76,29 +65,33 @@ def build_world(world):
     cg3 = CommandGeneratorBuilder().build_with(make_command_generator3)
     cg4 = CommandGeneratorBuilder().build_with(make_command_generator4)
     cg5 = CommandGeneratorBuilder().build_with(make_command_generator5)
+    cg6 = CommandGeneratorBuilder().build_with(make_command_generator6)
     cg1.set_activation(user_input1)
     cg2.set_activation(user_input2)
     cg3.set_activation(user_input3)
     cg4.set_activation(user_input4)
     cg5.set_activation(user_input5)
+    cg6.set_activation(user_input6)
     world += camera1
-    #camera1.camera_position[0] = -5;
+    #camera1.camera_position[0] = -5
     #camera1.camera_position += np.array([2, 2, 2])
-    #camera1.set_zoom(1)
+    camera1.set_zoom(1)
     world += camera2
-    camera2.camera_position[0] = 5;
-    camera2.camera_position += np.array([2, -2, -15])
+    #camera2.camera_position[0] = 5
+    #camera2.camera_position += np.array([2, -2, -15])
 
     pyg_screen1.add_command_activation("forward", user_input1)
     pyg_screen1.add_command_activation("left", user_input2)
     pyg_screen1.add_command_activation("backward", user_input3)
     pyg_screen1.add_command_activation("right", user_input4)
-    pyg_screen1.add_command_activation("quit", user_input5)
+    pyg_screen1.add_command_activation("reorient", user_input5)
+    pyg_screen1.add_command_activation("quit", user_input6)
     pyg_screen2.add_command_activation("forward", user_input1)
     pyg_screen2.add_command_activation("left", user_input2)
     pyg_screen2.add_command_activation("backward", user_input3)
     pyg_screen2.add_command_activation("right", user_input4)
-    pyg_screen2.add_command_activation("quit", user_input5)
+    pyg_screen2.add_command_activation("reorient", user_input5)
+    pyg_screen2.add_command_activation("quit", user_input6)
     pyg_screen1.start_input_worker()
     pyg_screen2.start_input_worker()
     return world
@@ -136,15 +129,39 @@ c2line4 = [camera2(line4[0]), camera2(line4[1])]
 
 camera1_addend = np.array([1, 0, 0])
 camera2_addend = np.array([0, 0, 1])
+camera1.camera_position += np.array([0, -4, 4])
+camera1.set_camera_orientation(np.array([0, 0, -1]))
+
+#camera1.set_camera_orientation(np.array([0, 0, -1]))
+
+
+drone = Drone(np.array([0, 4, 0]), 3, camera1)
+print("==================")
+print(drone.drone_center)
+print(drone.motor_coordinates)
+print("==================")
+drone.motor_set_power_percent(0, 0.2)
+drone.motor_set_power_percent(1, -0.2)
+drone.motor_set_power_percent(2, 0.5)
+drone.motor_set_power_percent(3, -0.5)
+drone.update()
+drone.update()
+drone.update()
+print("==================")
+print(drone.drone_center)
+print(drone.motor_coordinates)
+print("==================")
+
 if __name__ == "__main__":
     while True:
-        pyg_screen1([c1line1, c1line2, c1line3, c1line4])
+        pyg_screen1([DLine(c1line1), DLine(c1line2), DLine(c1line3), DLine(c1line4), DDrone(drone)])
         time.sleep(0.02)
+        #drone.rotate(math.pi / 12, np.array([0, 0, 1]))
         #pyg_screen2([c2line1, c2line2, c2line3, c2line4])
         #time.sleep(1)
 
-        camera1.camera_position += camera1_addend * 3
-        camera2.camera_position += camera2_addend * 3
+        #camera1.camera_position += camera1_addend * 3
+        #camera2.camera_position += camera2_addend * 3
         if camera1.camera_position[0] >= 20:
             camera1_addend = np.array([-1, 0, 0])
         elif camera1.camera_position[0] <= -20:

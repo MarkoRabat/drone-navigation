@@ -30,9 +30,12 @@ class Presenter:
             raise Error(f"redefinition of {key} command activation")
         self.command_activations[key] = activation
 
-    def activate_command(self, command_key: str):
-        if command_key in self.command_activations:
-            self.command_activations[command_key].activate_command()
+    def activate_command(self, command_key: str, params = []):
+        if command_key not in self.command_activations: return
+        for param_key, param_value in params:
+            self.command_activations[command_key].set_parameter(param_key, param_value)
+        self.command_activations[command_key].activate_command()
+        self.command_activations[command_key].clear_parameters()
 
     def start_input_worker(self):
         if self.input_worker is not None: self.stop_input_worker()

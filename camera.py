@@ -65,10 +65,12 @@ class Camera(WorldObject):
         viewing_screen_height = self.near_base_height * self.zoom
 
         # coordinatess of the camera object relative to the common frame of reference
-        self.camera_position = np.array([0, 0, 0])
+        self.camera_position = np.array([0, 0, 0], dtype="float64")
 
         # camera orientation ("the way in which camera looks") - unit vector
-        self.camera_orientation = np.array([0, 1, 0])
+        self.camera_orientation = np.array([0, 1, 0], dtype="float64")
+        # this needs to remain still relative to camera_orientation
+        self.camera_normal_orientation = np.array([1, 0, 0], dtype="float64")
 
         # squishes truncated pyramid to rectangular prism
         # thus applying perspective 
@@ -170,6 +172,27 @@ class Camera(WorldObject):
         ], dtype=np.float64)
 
         self.ortographic_transformation = np.dot(scale_transformation, self.ortographic_transformation)
+        return self
+    
+    # we need to keep camera_normal_orientation still relative to camera_orientation
+    def set_camera_orientation(self, new_orientation):
+        align_to_new_orientation = vutils.rotate_align_matrix(
+            self.camera_orientation, new_orientation)
+        self.camera_orientation = np.array(
+            [new_orientation[0], new_orientation[1], new_orientation[2]])
+        self.camera_normal_orientation = np.dot(
+            align_to_new_orientation, np.append(self.camera_normal_orientation, 1))[:-1]
+        return self
+    
+    def rotate_camera_orientation(self, rotation_axis, angle):
+        rotation_by_angle = vutils.rotation_matrix(angle, rotation_axis)
+        self.camera_orientation = np.dot(rotation_by_angle, np.append(self.camera_orientation, 1))[:-1]
+        self.camera_orientation = vutils.normalize(self.camera_orientation)
+        self.camera_normal_orientation = np.dot(rotation_by_angle, np.append(self.camera_normal_orientation, 1))[:-1]
+        self.camera_normal_orientation = vutils.normalize(self.camera_normal_orientation)
+        print(self.camera_orientation)
+        return self
+
 
     # project standardized frame to screen
     def project_sf(self, vec_to_project: np.ndarray):
