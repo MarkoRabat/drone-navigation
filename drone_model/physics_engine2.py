@@ -18,6 +18,7 @@ DroneParameters = Params()
 
 gravity_magnitude = 9.80665 / 2
 gravity_vector = np.array([0, 0, 0], dtype=float)
+pdgravity_vector = np.array([0, 0, 0], dtype=float)
 
 
 def rotation_matrix_factory(angle, unit_vector, degrees=False):
@@ -49,15 +50,14 @@ def normalize_vector(v):
     return v
 
     
-def init_gravity_vector(ground):
+def init_gravity_vector_from_ground(ground):
     global gravity_vector
     u = ground.bottom_left[0:3] - ground.center[0:3]
     v = ground.bottom_right[0:3] - ground.center[0:3]
     unit_vector = cross_product(u, v)[0:3]
     unit_vector = normalize_vector(unit_vector)
     gravity_vector = gravity_magnitude * -unit_vector
-    print("GRAVITY VECTOR:")
-    print(gravity_vector)
+    pdgravity_vector = gravity_vector
 
 def init_gravity_vector_from_unitv(unitv):
     global gravity_vector

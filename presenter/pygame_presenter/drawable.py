@@ -68,10 +68,10 @@ class DDrone(Drawable):
     
     def adjust(self):
         if self.data.pr is None: raise Exception("camera to project onto not supplied to drone")
-        thrust_scaling_factor = 0.02
+        thrust_scaling_factor = 0.0002
         gravity_scaling_factor = 0.025
         motors = self.data.motor_coordinates[self.data.motor_coordinates[:, 2].argsort()][:, :-1]
-        drone_center = self.data.drone_center
+        drone_center = np.copy(self.data.drone_center)
 
         new_ddrone = {
             "drone": self.data,

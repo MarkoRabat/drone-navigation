@@ -18,7 +18,7 @@ class Drone():
             np.array([drone_center[0] - radius, drone_center[1], drone_center[2], 1], dtype=float),
             np.array([drone_center[0], drone_center[1], drone_center[2] - radius, 1], dtype=float),
         ])
-        
+
         self.parameter_loaded = False
         self.motor_power_per = np.array([0, 0, 0, 0], dtype=float)
         # max angle that it can rotate in one iteration
@@ -29,7 +29,7 @@ class Drone():
         self.euler_angles = np.array([0, 0, 0], dtype=float)
         self.pd_params_integral = np.array([0, 0, 0], dtype=float)
 
-        self.propeller_centers = self.motor_coordinates + np.array([0, -0.002 * radius, 0, 0], dtype=float)
+        self.propeller_centers = self.motor_coordinates + np.array([0, radius * 0.03, 0, 0], dtype=float)
         propeller_size = radius / 10.
         self.propellers = []
         for i in range(4):
@@ -226,58 +226,12 @@ class Drone():
         #powers *= np.sqrt(pe.magnitude(pe.get_grav_vector()))
         #powers *= thrust_needed
 
-        print(powers)
         for i in range(4):
             self.motor_set_power_percent(i, ((-1) ** (i + 1)) * powers[i])
             if i in self.motor_sliders:
                 self.motor_sliders[i].set_value(np.sign(self.motor_power_per[i]) * self.motor_power_per[i])
-        
 
-    def nudge_towards_vector(self, vec):
-        try:
-            self.drone_center
-            self.motor_coordinates
-            v1 = self.motor_coordinates[0] - self.drone_center
-            v2 = self.motor_coordinates[1] - self.drone_center
-            vcross = pe.cross_product(v1, v2)
-            rot_axis = pe.cross_product(vcross, vec)
-            angle = pe.angle_between_vectors(vec, vcross)
-            vcrm = normalize_vector(vcross)
-            self.rotate(angle, rot_axis)
-        except: pass
-    
-    def move_vector(self, direction, T_hover=0.5, strength=1):
-        """
-        Move drone in 2D direction [vx, vy] while keeping altitude roughly stable.
-        
-        direction: [vx, vy]  (+x = right, +y = forward)
-        T_hover: base hover power (balances gravity)
-        strength: small nudge factor (0.0–0.2)
-        """
-        vx, vy = direction
-        vx = np.clip(vx, -1, 1)
-        vy = np.clip(vy, -1, 1)
-
-        # Minimal differential thrusts
-        T0 = T_hover - strength * vx   # right motor
-        T1 = T_hover - strength * vy   # front motor
-        T2 = T_hover + strength * vx   # left motor
-        T3 = T_hover + strength * vy   # rear motor
-
-        # Clamp powers between 0 and 1
-        powers = np.clip([T0, T1, T2, T3], 0.0, 1.0)
-
-        # Apply powers
-        for i in range(4):
-            self.motor_set_power_percent(i, powers[i])
-
-        return powers
-
-
-
-
-    
-
+    """
     def draw_to_(self, screen):
         body_width = 5
         motor_point_size = 2
@@ -295,8 +249,8 @@ class Drone():
             thrust_force_begin = thrust_force_begin[self.propeller_centers[:, 2].argsort()] 
             thrust_force_end = thrust_force_end[self.propeller_centers[:, 2].argsort()]
             gravity_force_vector = np.insert(gravity_scaling_factor * self.gravity_vector, 3, np.array([1]), axis=0)
-            gravity_force_begin = self.drone_center + 2 * pe.normalize_vector(gravity_force_vector)
-            gravity_force_end = self.drone_center + gravity_force_vector
+            gravity_force_begin = drone_center + 2 * pe.normalize_vector(gravity_force_vector)
+            gravity_force_end = drone_center + gravity_force_vector
 
         propeller_centers = self.propeller_centers[self.propeller_centers[:, 2].argsort()]
 
@@ -310,17 +264,19 @@ class Drone():
 
         if self.pr is not None:
             for i in range(4):
-                motors[i] = self.pr.p2_canonical(motors[i])
-                propeller_centers[i] = self.pr.p2_canonical(propeller_centers[i])
+                #motors[i] = self.pr(motors[i])
+                #propeller_centers[i] = self.pr(propeller_centers[i])
                 if self.thrust_vectors is not None:
-                    thrust_force_begin[i] = self.pr.p2_canonical(thrust_force_begin[i])
-                    thrust_force_end[i] = self.pr.p2_canonical(thrust_force_end[i])
+                    thrust_force_begin[i] = self.pr(thrust_force_begin[i])
+                    thrust_force_end[i] = self.pr(thrust_force_end[i])
                 for j in range(len(propellers[i])):
-                    propellers[i][j] = self.pr.p2_canonical(propellers[i][j])
-            drone_center = self.pr.p2_canonical(drone_center)
+                    #propellers[i][j] = self.pr(propellers[i][j])
+                    pass
+            drone_center = self.pr(drone_center)
             if self.thrust_vectors is not None:
-                gravity_force_begin = self.pr.p2_canonical(gravity_force_begin)
-                gravity_force_end = self.pr.p2_canonical(gravity_force_end)
+                #gravity_force_begin = self.pr(gravity_force_begin)
+                #gravity_force_end = self.pr(gravity_force_end)
+                pass
         drone_center = tuple(drone_center[0:2])
         mmax = motors[:, 2].max()
 
@@ -336,14 +292,11 @@ class Drone():
                 if self.thrust_vectors is not None:
                     pygame.draw.line(screen, (0, 255, 0), tuple(thrust_force_begin[i][0:2]), tuple(thrust_force_end[i][0:2]), 3)
             pygame.draw.line(screen, self.body_color, tuple(motors[i][0:2]), drone_center, width=body_width)
+    """
 
 
 if __name__ == "__main__":
     drone = Drone(np.array([0, 0, 0], dtype=float), 5)
-    #print(drone.get_drone_center())
-    #print(drone.get_motor_coordinates())
-    #print(drone.get_motor_coordinates())
-    #print(drone.dist_from(np.array([97, 96, 100, 1])))
     drone.motor_set_power_percent(0, 0.3)
     drone.motor_set_power_percent(1, -0.4)
     drone.motor_set_power_percent(2, 0.5)

@@ -9,17 +9,21 @@ from command import Command, CommandQueue, AvailableCommands
 from command_generator import CommandGeneratorBuilder
 from activation import UserInput
 from drone_model.drone_model import Drone
+import drone_model.physics_engine as pe
 import math
 
 pyg_screen1 = PygScreen()
 pyg_screen2 = PygScreen()
 
+camera1 = Camera()
+camera2 = Camera()
+
+drone = Drone(np.array([0, 4, 0]), 2, camera1)
+drone2 = Drone(np.array([12, 4, 12]), 2, camera1)
+
 def print_command5(entity, params):
     print(entity, end=" ")
     print("quit")
-
-camera1 = Camera()
-camera2 = Camera()
 
 command_queue = CommandQueue()
 
@@ -108,13 +112,10 @@ point2[1] = 4
 point3[1] = 4
 point4[1] = 4
 
-
 line1 = [point1, point2]
 line2 = [point1, point3]
 line3 = [point2, point4]
 line4 = [point3, point4]
-
-
 
 c1line1 = [camera1(line1[0]), camera1(line1[1])]
 c1line2 = [camera1(line2[0]), camera1(line2[1])]
@@ -135,11 +136,13 @@ camera1.camera_position += np.array([0, 0, -6])
 #camera1.set_camera_orientation(np.array([0, 0, -1]))
 
 
-drone = Drone(np.array([0, 4, 0]), 2, camera1)
+
+pe.init_gravity_vector_from_unitv(np.array([0, 4.903325, 0]))
+print(pe.get_grav_vector())
 print("==================")
 print(drone.drone_center)
 print(drone.motor_coordinates)
-drone.rotate(math.pi / 3, np.array([0, 1, 0]))
+#drone.rotate(math.pi / 3, np.array([1, 1, 0]))
 print("==================")
 print(drone.drone_center)
 print(drone.motor_coordinates)
@@ -161,17 +164,123 @@ print(drone.drone_center)
 print(drone.motor_coordinates)
 print("==================")
 """
-drone.motor_set_power_percent(0, 0.2)
-drone.motor_set_power_percent(1, -0.2)
-drone.motor_set_power_percent(2, 0.2)
-drone.motor_set_power_percent(3, -0.2)
-drone.update()
+#drone.motor_set_power_percent(0, 0.2)
+#drone.motor_set_power_percent(1, -0.2)
+#drone.motor_set_power_percent(2, 0.2)
+#drone.motor_set_power_percent(3, -0.2)
+#drone.update()
+
+
+pid_sleep_time = 10
+pid_reset_interval_factor = 100
+time_passed = 0
+intervals_passed = 0
+follow_time = 8
+ftime_passed = follow_time
+pid_on = True
+
+
+diff_vec = drone2.drone_center[0:3] - drone.drone_center[0:3]
+def update():
+    global time_passed
+    global intervals_passed
+    global pid_on
+    global pid_sleep_time
+    global ftime_passed
+    global diff_vec
+    #drone.rotate(-0.03, [0, 1, 0])
+    #ground.rotate(-0.03, [0, 1, 0]) # cool ground rotation
+    #drone.rotate(-0.15, [1, 0, 0])
+    #ground.rotate_ground(-0.03, [0, 1, 0])
+    #drone.motor_set_power_percent(0, -0.392)
+    #drone.motor_set_power_percent(1, 0.392)
+    #drone.motor_set_power_percent(2, -0.392)
+    #drone.motor_set_power_percent(3, 0.392)
+    if pid_reset_interval_factor:
+        drone.pd_params_integral = np.array([0, 0, 0], dtype=float)
+    if time_passed == pid_sleep_time:
+        if pid_on:
+            #drone.pd()
+            pass
+        time_passed = 0
+        intervals_passed += 1
+    #drone.move_vector([3, 0])
+    drone.nudge_towards_vector([12, 0, 12, 1])
+    drone.update()
+    if (drone.drone_center[1] > 4.6):
+        for i in range(4):
+            drone.motor_set_power_percent(i, 0.7)
+        time_passed = 8
+    
+    if (drone.drone_center[1] < 1.5):
+        drone.motor_set_power_percent(0, 0.0)
+        drone.motor_set_power_percent(1, 0.0)
+        drone.motor_set_power_percent(1, 0.0)
+        drone.motor_set_power_percent(1, 0.0)
+    
+    if ftime_passed == follow_time:
+        #drone.follow_vector([-1, 0, 0])
+        #drone.follow_vector(diff_vec)
+        #diff_vec = drone2.drone_center[0:3] - drone.drone_center[0:3]
+        drone.nudge_towards_vector([12, 0, 12, 1])
+        #drone.move_vector([3, 0])
+        #drone.set_stronger([+0.1, +0.1, 0, 0])
+        #drone.set_stronger([0, 0, -0.1, -0.1])
+        time_passed = 8
+        ftime_passed = -2
+
+    time_passed += 1
+    ftime_passed += 1
+    print("drone: ", drone.drone_center)
+
+
+
+
+pid_sleep_time2 = 10
+pid_reset_interval_factor2 = 100
+time_passed2 = 0
+intervals_passed2 = 0
+follow_time2 = 15
+pid_on = True
+def update2():
+    global time_passed2
+    global intervals_passed2
+    global pid_on
+    global pid_sleep_time2
+    #drone.rotate(-0.03, [0, 1, 0])
+    #ground.rotate(-0.03, [0, 1, 0]) # cool ground rotation
+    #drone.rotate(-0.15, [1, 0, 0])
+    #ground.rotate_ground(-0.03, [0, 1, 0])
+    #drone.motor_set_power_percent(0, -0.392)
+    #drone.motor_set_power_percent(1, 0.392)
+    #drone.motor_set_power_percent(2, -0.392)
+    #drone.motor_set_power_percent(3, 0.392)
+    if pid_reset_interval_factor2:
+        drone2.pd_params_integral = np.array([0, 0, 0], dtype=float)
+    if time_passed2 == pid_sleep_time2:
+        if pid_on:
+            drone2.pd()
+        time_passed2 = 0
+        intervals_passed2 += 1
+    time_passed2 += 1
+    drone2.update()
+    if (drone2.drone_center[1] > 4.6):
+        drone2.motor_set_power_percent(0, 0.5)
+        drone2.motor_set_power_percent(1, 0.5)
+        drone2.motor_set_power_percent(2, 0.5)
+        drone2.motor_set_power_percent(3, 0.5)
+        time_passed2 = 8
+    #print("drone2: ", drone2.drone_center)
+
+
+
 
 if __name__ == "__main__":
     while True:
-        pyg_screen1([DLine(c1line1), DLine(c1line2), DLine(c1line3), DLine(c1line4), DDrone(drone)])
-        time.sleep(0.02)
-        drone.rotate(math.pi / 3, np.array([0, 1, 0]))
+        pyg_screen1([DLine(c1line1), DLine(c1line2), DLine(c1line3), DLine(c1line4), DDrone(drone), DDrone(drone2)])
+        #time.sleep(0.02)
+        update()
+        update2()
         #drone.rotate(math.pi / 12, np.array([0, 0, 1]))
         #pyg_screen2([c2line1, c2line2, c2line3, c2line4])
         #time.sleep(1)
